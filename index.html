@@ -202,7 +202,7 @@
   <script>
     // ==== CONFIGURE THIS ENDPOINT ====
     const API_URL = "https://script.google.com/macros/s/AKfycbzG03x73sbgYLMFPaPIrc624A_fWDu6YjPQWJzSmt6OCTA-qFdMGcDOe5PQV2eTrMthog/exec"; // TODO: set real endpoint
-    const API_HEADERS = { "Content-Type": "application/json" /*, "X-Api-Key": "..." */ };
+    const API_HEADERS = { "Content-Type": "text/plain;charset=utf-8" /* avoids CORS preflight; body is still JSON string */, /* "X-Api-Key": "..." */ };
     const SHEET_NAME = "New Equipment";
 
     // ==== MODEL DEFINITIONS & AUTOFILL RULES ====
@@ -348,6 +348,25 @@
     }
 
     // ==== Single entry events ====
+    // Auto-advance from Asset Tag -> Serial when scanner sends ENTER/TAB or CR/LF
+    function handleAutoAdvance(srcInput, nextInput){
+      srcInput.addEventListener('keydown', (e)=>{
+        if(e.key==='Enter' || e.key==='Tab'){ e.preventDefault(); nextInput.focus(); nextInput.select?.(); }
+      });
+      srcInput.addEventListener('input', ()=>{
+        // If scanner injected CR/LF characters, strip them and advance
+        const v = srcInput.value;
+        if(/[
+]$/.test(v)){
+          srcInput.value = v.replace(/[
+]+/g,'');
+          nextInput.focus(); nextInput.select?.();
+        }
+      });
+    }
+    handleAutoAdvance(assetTagEl, serialEl);
+
+    
     function fillModelOptions(kind){ fillModelOptionsFor(modelEl, kind); productEl.value=''; typeEl.value=kind?capitalize(kind):''; mfgEl.value=''; }
     hardwareTypeEl.addEventListener('change', e=>{ fillModelOptions(e.target.value); setTimeout(()=>assetTagEl.focus(),0); });
     modelEl.addEventListener('change', e=>{ const rule = autofillFrom(hardwareTypeEl.value, e.target.value); productEl.value=rule.productNumber; typeEl.value=rule.type; mfgEl.value=rule.manufacturer; });
