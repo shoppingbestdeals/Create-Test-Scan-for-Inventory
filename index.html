@@ -52,9 +52,9 @@
   <main>
     <section class="card">
       <nav class="tabbar">
-        <button id="tab-single" class="active">New Inventory</button>
-        <button id="tab-batch">Batch Scan</button>
-        <button id="tab-review">Review Queue</button>
+        <button id="tab-single" class="active" type="button">New Inventory</button>
+        <button id="tab-batch" type="button">Batch Scan</button>
+        <button id="tab-review" type="button">Review Queue</button>
       </nav>
 
       <!-- SINGLE ENTRY -->
@@ -110,8 +110,8 @@
           </div>
         </div>
         <div class="actions">
-          <button id="submitBtn" class="btn primary">Submit to Sheet</button>
-          <button id="addToQueueBtn" class="btn">Add to Queue</button>
+          <button id="submitBtn" class="btn primary" type="button">Submit to Sheet</button>
+          <button id="addToQueueBtn" class="btn" type="button">Add to Queue</button>
           <button id="resetBtn" class="btn ghost" type="button">Clear</button>
           <span class="pill">Sheet: <strong class="mono">New Equipment</strong></span>
         </div>
@@ -149,8 +149,8 @@
           </div>
         </div>
         <div class="actions">
-          <button id="batchAddBtn" class="btn primary">Add to Queue</button>
-          <button id="goReviewBtn" class="btn">Go to Review</button>
+          <button id="batchAddBtn" class="btn primary" type="button">Add to Queue</button>
+          <button id="goReviewBtn" class="btn" type="button">Go to Review</button>
         </div>
         <div class="hint" style="margin-top:8px;">Pro tip: set DataWedge to auto-tab/enter after scan to speed up.</div>
       </div>
@@ -158,8 +158,8 @@
       <!-- REVIEW QUEUE -->
       <div id="view-review" style="display:none">
         <div class="actions" style="margin-bottom:8px;">
-          <button id="submitAllBtn" class="btn primary">Submit All to Sheet</button>
-          <button id="clearQueueBtn" class="btn ghost">Clear Queue</button>
+          <button id="submitAllBtn" class="btn primary" type="button">Submit All to Sheet</button>
+          <button id="clearQueueBtn" class="btn ghost" type="button">Clear Queue</button>
           <span class="pill" id="queueCountPill">0 items</span>
         </div>
         <div class="hint">Edit inline before submitting. Values like Product Number/Type/Manufacturer auto-fill from model.</div>
@@ -202,7 +202,7 @@
   <script>
     // ==== CONFIGURE THIS ENDPOINT ====
     const API_URL = "https://script.google.com/macros/s/AKfycbzG03x73sbgYLMFPaPIrc624A_fWDu6YjPQWJzSmt6OCTA-qFdMGcDOe5PQV2eTrMthog/exec"; // TODO: set real endpoint
-    const API_HEADERS = { "Content-Type": "application/json" /*, "X-Api-Key": "..." */ };
+    const API_HEADERS = { "Content-Type": "text/plain;charset=utf-8" /* avoids CORS preflight; body is still JSON string */, /* "X-Api-Key": "..." */ };
     const SHEET_NAME = "New Equipment";
 
     // ==== MODEL DEFINITIONS & AUTOFILL RULES ====
@@ -348,6 +348,22 @@
     }
 
     // ==== Single entry events ====
+    // Auto-advance from Asset Tag -> Serial when scanner sends ENTER/TAB or CR/LF
+    function handleAutoAdvance(srcInput, nextInput){
+      srcInput.addEventListener('keydown', (e)=>{
+        if(e.key==='Enter' || e.key==='Tab'){ e.preventDefault(); nextInput.focus(); nextInput.select?.(); }
+      });
+      srcInput.addEventListener('input', ()=>{
+        // If scanner injected CR/LF characters, strip them and advance
+        const v = srcInput.value;
+        if(/[\r\n]$/.test(v)){
+          srcInput.value = v.replace(/[\r\n]+/g,'');
+          nextInput.focus(); nextInput.select?.();
+        }
+      });
+    }
+    handleAutoAdvance(assetTagEl, serialEl);
+
     function fillModelOptions(kind){ fillModelOptionsFor(modelEl, kind); productEl.value=''; typeEl.value=kind?capitalize(kind):''; mfgEl.value=''; }
     hardwareTypeEl.addEventListener('change', e=>{ fillModelOptions(e.target.value); setTimeout(()=>assetTagEl.focus(),0); });
     modelEl.addEventListener('change', e=>{ const rule = autofillFrom(hardwareTypeEl.value, e.target.value); productEl.value=rule.productNumber; typeEl.value=rule.type; mfgEl.value=rule.manufacturer; });
@@ -410,7 +426,7 @@
           <td><input class="mini" data-field="manufacturer" value="${item.manufacturer}" readonly></td>
           <td><input class="mini" data-field="notes" value="${item.notes||''}"></td>
           <td>
-            <button class="btn mini ghost" data-act="remove">Remove</button>
+            <button class="btn mini ghost" type="button" data-act="remove">Remove</button>
           </td>
           <td class="status mono">⏸</td>
         `;
